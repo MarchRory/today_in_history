@@ -1,0 +1,163 @@
+<script setup lang="ts">
+import { ref, computed } from "vue";
+import request from "@/utils/request";
+import { listItem, ResultModel } from "@/types/index";
+import Loading from "@/components/Loading.vue";
+interface pagiNation {
+  page: number;
+  pageSize: number;
+}
+type metaType = Omit<ResultModel, "data">;
+const pagination = ref<pagiNation>({
+  page: 1,
+  pageSize: 10,
+});
+const list = ref<listItem[]>([]);
+const meta = ref<metaType>({
+  subtitle: "",
+  success: true,
+  title: "",
+  update_time: "",
+});
+function loadList() {
+  request().then((res: ResultModel) => {
+    const { data } = res;
+    setTimeout(() => {
+      Object.keys(meta.value).forEach((key) => {
+        meta.value[key] = res[key];
+      });
+      list.value = data;
+    }, 1 * 1000);
+  });
+}
+const hoverIndex = ref(-1);
+const showlist = computed(() =>
+  list.value.slice(
+    (pagination.value.page - 1) * pagination.value.pageSize,
+    pagination.value.page * pagination.value.pageSize
+  )
+);
+
+loadList();
+</script>
+
+<template>
+  <div
+    style="height: 100vh"
+    class="flex items-center justify-center w-full py-8 font-mono font-bold text-gray-500 bg-zinc-50"
+  >
+    <div
+      class="flex flex-col items-center justify-around w-3/5 h-full overflow-hidden rounded-lg"
+    >
+      <transition name="fade" v-if="list.length">
+        <div class="w-full text-2xl font-bold text-center">
+          {{ meta.subtitle }} - {{ meta.update_time.substring(0, 10) }}
+        </div>
+      </transition>
+
+      <div class="w-full px-4 py-4 overflow-auto h-5/6 bg-zinc-100">
+        <loading
+          class="absolute -translate-x-1/2 -translate-y-1/2 left-1/2 top-1/2"
+          :is-visible="!list.length"
+        />
+        <transition-group name="fade" tag="ul">
+          <li
+            @mouseenter="hoverIndex = index"
+            @mouseleave="hoverIndex = -1"
+            class="flex flex-col w-full px-3 py-2 mb-3 transition-colors border-4 border-transparent rounded-md hover:cursor-default hover:bg-white hover:border-indigo-300 h-fit bg-zinc-200"
+            v-for="(item, index) in showlist"
+            :key="index"
+            :style="{ flexDirection: index % 2 == 0 ? 'row' : 'row-reverse' }"
+          >
+            <div class="flex flex-col w-full h-full">
+              <div
+                class="w-full h-8 mb-4 text-xl"
+                :style="{ color: hoverIndex == index ? '#2573ce' : '' }"
+              >
+                {{ item.title }}
+              </div>
+              <div
+                :style="{ color: hoverIndex == index ? 'black' : '' }"
+                class="w-full px-4 mt-2 mb-2 leading-8 h-3/4 verticle indent-8"
+              >
+                {{ item.desc }}
+              </div>
+              <a
+                class="relative w-full py-3 hover:text-sky-500"
+                style="left: 90%"
+                :href="item.mobilUrl"
+                target="_blank"
+                >详情>></a
+              >
+            </div>
+          </li>
+        </transition-group>
+      </div>
+
+      <transition name="fade" v-if="list.length">
+        <div style="margin: 0 auto" class="flex text-xl w-fit">
+          <button
+            :disabled="pagination.page == 1"
+            class="hover:text-indigo-400"
+            @click="pagination.page--"
+          >
+            Pre
+          </button>
+          <div class="mx-10">
+            {{ pagination.page }}/{{
+              Math.ceil(list.length / pagination.pageSize)
+            }}
+          </div>
+          <button
+            :disabled="
+              pagination.page == Math.ceil(list.length / pagination.pageSize)
+            "
+            @click="pagination.page++"
+            class="hover:text-indigo-400"
+          >
+            next
+          </button>
+        </div>
+      </transition>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+::-webkit-scrollbar {
+  width: 6px;
+  height: 0;
+}
+::-webkit-scrollbar-thumb {
+  background-color: rgb(199, 193, 244);
+  border-radius: 15px;
+}
+::-moz-scrollbar {
+  width: 6px;
+  height: 0;
+}
+::-moz-scrollbar-thumb {
+  background-color: rgb(199, 193, 244);
+}
+.fade-move,
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.5s cubic-bezier(0.55, 0, 0.1, 1);
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: scaleY(0.01) translate(60px, 0);
+}
+.fade-leave-active {
+  position: relative;
+}
+.verticle {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+}
+</style>
